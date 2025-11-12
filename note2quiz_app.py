@@ -386,7 +386,7 @@ def main():
     st.markdown("""
     <hr>
     <div style="text-align:center; color:grey;">
-        <p>Developed with ❤️ by Our team[Saroj,Anamta,Khushi,Neha,Yashika] | Powered by Streamlit & Gemini</p>
+      #  <p>Developed with ❤️ by Our team[Saroj,Anamta,Khushi,Neha,Yashika] | Powered by Streamlit & Gemini</p>
     </div>
     """, unsafe_allow_html=True)
 if __name__ == "__main__":
