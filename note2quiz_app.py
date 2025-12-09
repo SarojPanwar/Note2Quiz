@@ -4,31 +4,29 @@ import os
 import io
 import pymupdf
 import pandas as pd 
-from dotenv import load_dotenv   # For Secure API Key Loading
-from google import genai   # For Gemini API
+from dotenv import load_dotenv   
+from google import genai   
 from google.genai import types 
-from docx import Document   # For Word Doc generation
+from docx import Document   
 from docx.shared import Inches
 
-# --- CONFIGURATION & MODEL LOADING ---
 
-# Load  .env file
 load_dotenv() 
 
 os.environ["GOOGLE_API_KEY"]=os.getenv("GEMINI_API_KEY")
-# Load spaCy model for NLP tasks (MCQs)
+
 nlp = spacy.load("en_core_web_sm")
 
-#Initialize  Gemini model 
+
 try:
     client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
     model="gemini-2.5-flash"
-   # st.success("✅Gemini Model connceted successfully!")
+  
 except Exception as e:
     st.error(f"Gemini model setup failed:{e}")
     model=None
     
-# System Instruction for strict, exam-based output
+
 STRICT_SYSTEM_INSTRUCTION = (
      "You are a highly analytical academic question generator. "
     "Your only task is to create exam-based questions from the given text. "
@@ -36,7 +34,7 @@ STRICT_SYSTEM_INSTRUCTION = (
     "Return only a clean, numbered list of short, exam-style questions."
 )
 
-# --- CORE FUNCTIONS ---
+
 
 def classify_bloom(question):
     """Classifies a question based on simple keyword matching (Bloom's Taxonomy)."""
@@ -58,19 +56,19 @@ def classify_bloom(question):
     
 def extract_text_from_pdf(uploaded_file):
     """Extracts clean, properly spaced text from a PDF using PyMuPDF."""
-    import fitz  # PyMuPDF
+    import fitz 
 
     text = ""
     try:
-        # Open the uploaded PDF file
+       
         with fitz.open(stream=uploaded_file.read(), filetype="pdf") as pdf:
             for page in pdf:
-                page_text = page.get_text("text")  # accurate text extraction
+                page_text = page.get_text("text")  
                 if page_text:
                     text += " " + page_text
 
-        # --- Clean the extracted text ---
-        text = " ".join(text.split())  # normalize spaces
+       
+        text = " ".join(text.split()) 
         text = (
             text.replace(" ,", ",")
                 .replace(" .", ".")
@@ -92,11 +90,11 @@ def extract_text_from_csv(uploaded_file):
         uploaded_file.seek(0)
         df = pd.read_csv(uploaded_file)
 
-        # Convert entire DataFrame into clean text
+        
         text = df.to_string(index=False, header=True)
 
-        # --- Clean CSV text for better sentence structure ---
-        text = " ".join(text.split())  # normalize spaces
+      
+        text = " ".join(text.split()) 
         text = (
             text.replace(" ,", ",")
                 .replace(" .", ".")
@@ -110,7 +108,7 @@ def extract_text_from_csv(uploaded_file):
         st.error(f"Error reading CSV file: {e}")
         return ""        
     
-     # generate_mcqs_with_gemini  
+     
 def generate_mcqs(text, num_questions=10):
     """Generates exam-based short MCQs using the Gemini API."""
     if not model:
@@ -192,7 +190,7 @@ def generate_viva_questions(text, num_questions=5):
         st.error("Gemini model is not initialized. Check your API key.")
         return []
 
-    # Focus prompt on higher-level questions for a proper 'viva' setting
+   
     prompt = f"""
     Based on the following lecture notes, generate {num_questions} high-level viva questions (Analysis, Synthesis, or Evaluation).
 
@@ -213,11 +211,11 @@ def generate_viva_questions(text, num_questions=5):
             )
         )
         
-        # Simple parsing: split by line and filter to get the questions
+       
         raw_questions = response.text.strip().split('\n')
         questions = []
         for q_line in raw_questions:
-            # Clean up numbering artifacts (e.g., "1. " or "- ")
+           
             clean_q = q_line.strip().lstrip('0123456789.- ').strip()
             if clean_q:
                 questions.append({
@@ -236,31 +234,31 @@ def create_word_document(mcqs, viva_questions):
     document = Document()
     document.add_heading('Note2Quiz Generated Questions', 0)
     
-    # --- Add MCQs ---
+   
     document.add_heading('Multiple Choice Questions (MCQs)', level=1)
     for i, q in enumerate(mcqs, 1):
         document.add_paragraph(f"Q{i}: {q['question']}", style='List Number')
         for idx, opt in enumerate(q['options']):
             document.add_paragraph(f"  {chr(65+idx)}. {opt}", style='List Bullet')
         document.add_paragraph(f"✅ Answer: {q['answer']} | 🧠 Bloom Level: {q['bloom']}").bold = True
-        document.add_paragraph("\n") # Separator
+        document.add_paragraph("\n")
 
-    # --- Add Viva Questions ---
+    
     document.add_heading('Viva/Discussion Questions', level=1)
     for i, q in enumerate(viva_questions, 1):
         document.add_paragraph(f"Q{i}: {q['question']}", style='List Number')
         document.add_paragraph(f"🧠 Bloom Level: {q['bloom']}").bold = True
-        document.add_paragraph("\n") # Separator
+        document.add_paragraph("\n") 
     
-    # Save the document to an in-memory stream
+    
     doc_io = io.BytesIO()
     document.save(doc_io)
     doc_io.seek(0)
     return doc_io   
 
-# --- STREAMLIT UI ---
+
 def main():
-    # --- PAGE CONFIGURATION ---
+  
     st.set_page_config(
         page_title="Note2Quiz - Smart Question Generator",
         page_icon="🧠",
@@ -268,15 +266,13 @@ def main():
         initial_sidebar_state="expanded"
     )
 
-    # --- SIDEBAR SETTINGS ---
-    #st.sidebar.image("logo.png", use_column_width=True)
+  
     st.sidebar.title("⚙️ Settings")
     num_mcqs = st.sidebar.slider("Number of MCQs", 5, 20, 10)
     num_viva = st.sidebar.slider("Number of Viva Questions", 3, 10, 5)
     st.sidebar.markdown("---")
     st.sidebar.info("Upload your notes file and generate questions instantly.")
 
-    # --- HEADER SECTION ---
     st.markdown("""
     <div style="text-align:center; padding: 10px 0;">
         <h1 style="color:#0066FF;">🧠 Note2Quiz</h1>
@@ -285,7 +281,7 @@ def main():
     </div>
     """, unsafe_allow_html=True)
 
-    # --- TABS FOR NAVIGATION ---
+   
     tab1, tab2 = st.tabs(["📤 Upload File", "📊 Generated Questions"])
 
     with tab1:
@@ -310,43 +306,42 @@ def main():
                 st.warning("⚠️ Could not extract meaningful text. Try another file.")
                 st.stop()
 
-            # --- Generate Questions ---
+           
             with st.spinner(f"Generating {num_mcqs} MCQs and {num_viva} Viva Questions..."):
                 mcqs = generate_mcqs(text, num_questions=num_mcqs)
                 viva = generate_viva_questions(text, num_questions=num_viva)
 
-            # Save to session so they show in the next tab
+           
             st.session_state["results"] = (mcqs, viva)
             st.success("✅ Questions generated successfully! Go to the 'Generated Questions' tab to view them.")       
     with tab2:
       st.header("Step 2: View Generated Questions")
 
-    # Check if results exist in session state
+    
       if "results" in st.session_state:
           mcqs, viva = st.session_state["results"]
-        # --- Display MCQs ---
+      
           with st.expander("📘 View Generated MCQs"):
                 if mcqs:
                   for i, q in enumerate(mcqs, 1):
-                    # 1. Display the Question Text
+                   
                     st.markdown(f"**Q{i}:** {q['question']}")
-                    
-                    # 2. Display the options (Inner loop)
+                   
                     for idx, opt in enumerate(q['options']):
-                        # Clean display of options (e.g., A. Option Text)
+                       
                         st.markdown(f"**{chr(65+idx)}.** {opt}")
                         
-                    # 3. Display the answer and bloom level
-                    st.markdown("---") # Visual separator after options
+                    
+                    st.markdown("---")
                     st.markdown(
-                        # This line is the clean, correct format. Spaces are essential!
+                       
                         f"**✅ Correct Answer:** {q['answer']} | **🧠 Bloom Level:** **{q['bloom']}**"
                     )
-                    st.markdown("---") # Separator before the next question
+                    st.markdown("---") 
                 else:
                   st.info("No MCQs were generated. Please check the content or try regenerating.") 
                 
-        # --- Display Viva Questions ---
+        
         
           with st.expander("🎤 View Viva Questions"):
               if viva:
@@ -357,13 +352,12 @@ def main():
               else:
                  st.info("No Viva Questions were generated.")
 
-        # --- Download Section ---
+      
           st.markdown("---")
           st.subheader("💾 Export Options")
         
-        # Only allow download if questions were generated
           if mcqs or viva:
-            # Assumes create_word_document is defined
+           
               doc_io = create_word_document(mcqs, viva) 
               st.download_button(
                 label="Download as Word Document (.docx)",
@@ -377,12 +371,12 @@ def main():
       else:
           st.info("ℹ️ Upload a file first in the 'Upload File' tab.")
 
-        # --- CHAT GUARDRAIL (Restriction) ---
+      
       user_input = st.chat_input("Ask a question...")
       if user_input:
          st.info("I have no knowledge about that. I am strictly designed to generate quizzes from PDF and CSV file content only. Thank you!")
 
-    # --- FOOTER ---
+  
     st.markdown("""
     <hr>
     <div style="text-align:center; color:grey;">
