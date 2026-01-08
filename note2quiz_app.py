@@ -57,7 +57,7 @@ def extract_text_from_pdf(uploaded_file):
 <<<<<<< HEAD
     import fitz  # PyMuPDF
 =======
-    import fitz   # PyMuPDF
+   
 >>>>>>> 43faed1a58cf90e4afe459725c32cdfc3d1f998e
 
     text = ""
