@@ -2,13 +2,11 @@ import streamlit as st
 import spacy
 import os
 import io
-import pymupdf
 import pandas as pd 
 from dotenv import load_dotenv   
 from google import genai   
 from google.genai import types 
 from docx import Document   
-from docx.shared import Inches
 
 
 load_dotenv() 
@@ -56,7 +54,7 @@ def classify_bloom(question):
     
 def extract_text_from_pdf(uploaded_file):
     """Extracts clean, properly spaced text from a PDF using PyMuPDF."""
-    import fitz 
+    import fitz  # PyMuPDF
 
     text = ""
     try:
