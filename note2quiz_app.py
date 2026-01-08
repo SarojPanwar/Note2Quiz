@@ -54,12 +54,9 @@ def classify_bloom(question):
     
 def extract_text_from_pdf(uploaded_file):
     """Extracts clean, properly spaced text from a PDF using PyMuPDF."""
-<<<<<<< HEAD
-    import fitz  # PyMuPDF
-=======
-   
->>>>>>> 43faed1a58cf90e4afe459725c32cdfc3d1f998e
 
+    import fitz  # PyMuPDF
+   
     text = ""
     try:
        
