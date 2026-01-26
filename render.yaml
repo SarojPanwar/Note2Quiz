@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: note2quiz
+    env: python
+    pythonVersion: 3.11.11
+    buildCommand: pip install --only-binary=:all: -r requirements.txt
+    startCommand: streamlit run note2quiz_app.py --server.port $PORT --server.address 0.0.0.0
