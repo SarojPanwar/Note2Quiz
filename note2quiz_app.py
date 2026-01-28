@@ -3,26 +3,15 @@ import spacy
 import os
 import io
 import pandas as pd 
-from dotenv import load_dotenv   
-from google import genai   
-from google.genai import types 
+from dotenv import load_dotenv 
+import requests  
 from docx import Document   
-
 
 load_dotenv() 
 
 os.environ["GOOGLE_API_KEY"]=os.getenv("GEMINI_API_KEY")
 
 nlp = spacy.load("en_core_web_sm")
-
-
-try:
-    client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-    model="gemini-2.5-flash"
-  
-except Exception as e:
-    st.error(f"Gemini model setup failed:{e}")
-    model=None
     
 
 STRICT_SYSTEM_INSTRUCTION = (
@@ -107,12 +96,53 @@ def extract_text_from_csv(uploaded_file):
         st.error(f"Error reading CSV file: {e}")
         return ""        
     
-     
+
+
+
+
+def call_gemini(prompt):
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        st.error("GEMINI_API_KEY not found")
+        return ""
+
+    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+    headers = {"Content-Type": "application/json"}
+    params = {"key": api_key}
+
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": prompt}
+                ]
+            }
+        ]
+    }
+
+    try:
+        r = requests.post(
+            url,
+            headers=headers,
+            params=params,
+            json=payload,
+            timeout=60
+        )
+        r.raise_for_status()
+        return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+
+    except Exception as e:
+        st.error(f"Gemini API call failed: {e}")
+        return ""
+
+
+
+
+
+
+
 def generate_mcqs(text, num_questions=10):
     """Generates exam-based short MCQs using the Gemini API."""
-    if not model:
-        st.error("Gemini model is not initialized. Check your API key.")
-        return []
 
     prompt = f"""
 You are an expert exam question setter.
@@ -139,14 +169,12 @@ Notes:
     """
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=STRICT_SYSTEM_INSTRUCTION
-               )
-        )
-        raw = response.text.strip().split("\n")
+        raw_text = call_gemini(prompt)
+        if not raw_text:
+            return []
+
+        raw = raw_text.strip().split("\n")
+
         questions, current_q = [], {}
 
         for line in raw:
@@ -185,9 +213,6 @@ Notes:
     
 def generate_viva_questions(text, num_questions=5):
     """Generates high-level viva questions using the Gemini API."""
-    if not model:
-        st.error("Gemini model is not initialized. Check your API key.")
-        return []
 
    
     prompt = f"""
@@ -202,16 +227,12 @@ def generate_viva_questions(text, num_questions=5):
     """
 
     try:
-        response =client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=STRICT_SYSTEM_INSTRUCTION
-            )
-        )
-        
+        raw_text = call_gemini(prompt)
+        if not raw_text:
+            return []
        
-        raw_questions = response.text.strip().split('\n')
+        raw_questions = raw_text.strip().split("\n")
+        
         questions = []
         for q_line in raw_questions:
            
