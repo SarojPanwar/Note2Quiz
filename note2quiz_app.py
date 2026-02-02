@@ -1,5 +1,6 @@
 import streamlit as st
 import re
+import time
 import os
 import io
 import pandas as pd 
@@ -116,7 +117,7 @@ def call_gemini(prompt):
             }
         ]
     }
-
+    time.sleep(2)
     try:
         r = requests.post(
             url,
@@ -125,11 +126,14 @@ def call_gemini(prompt):
             json=payload,
             timeout=60
         )
+        if r.status_code == 429:
+            st.warning("AI is busy right now. Please wait a few seconds ⏳")
+            return ""
         r.raise_for_status()
         return r.json()["candidates"][0]["content"]["parts"][0]["text"]
 
-    except Exception as e:
-        st.error(f"Gemini API call failed: {e}")
+    except requests.exceptions.RequestException:
+        st.error("Network or API issue. Please try again later.")
         return ""
 
 
