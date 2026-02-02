@@ -1,5 +1,5 @@
 import streamlit as st
-import spacy
+import re
 import os
 import io
 import pandas as pd 
@@ -10,10 +10,7 @@ from docx import Document
 load_dotenv() 
 
 os.environ["GOOGLE_API_KEY"]=os.getenv("GEMINI_API_KEY")
-
-nlp = spacy.load("en_core_web_sm")
     
-
 STRICT_SYSTEM_INSTRUCTION = (
      "You are a highly analytical academic question generator. "
     "Your only task is to create exam-based questions from the given text. "
@@ -99,14 +96,14 @@ def extract_text_from_csv(uploaded_file):
 
 
 
-
+MODEL_NAME = "gemini-2.5-flash"
 def call_gemini(prompt):
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         st.error("GEMINI_API_KEY not found")
         return ""
 
-    url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent"
     headers = {"Content-Type": "application/json"}
     params = {"key": api_key}
 
@@ -144,7 +141,7 @@ def call_gemini(prompt):
 def generate_mcqs(text, num_questions=10):
     """Generates exam-based short MCQs using the Gemini API."""
 
-    prompt = f"""
+    prompt = STRICT_SYSTEM_INSTRUCTION + "\n\n" + f"""
 You are an expert exam question setter.
 
 Generate {num_questions} **short, exam-style multiple-choice questions (MCQs)** 
@@ -212,18 +209,17 @@ Notes:
         return []
     
 def generate_viva_questions(text, num_questions=5):
-    """Generates high-level viva questions using the Gemini API."""
 
-   
     prompt = f"""
-    Based on the following lecture notes, generate {num_questions} high-level viva questions (Analysis, Synthesis, or Evaluation).
-
+    You are an academic examiner.
+    Based on the following lecture notes, generate exactly {num_questions} high-level viva questions (Analysis, Synthesis, or Evaluation).
+    Rules:
+    -Output ONLY numbered questions
+    -one question per line
+    -No explanationa or extra text
     Notes:
     ---
     {text[:4000]} 
-    ---
-    
-    Provide the output as a clean, numbered list of questions.
     """
 
     try:
@@ -231,19 +227,15 @@ def generate_viva_questions(text, num_questions=5):
         if not raw_text:
             return []
        
-        raw_questions = raw_text.strip().split("\n")
+        matches = re.findall(r"\d+\.\s*(.+)",raw_text)
         
         questions = []
-        for q_line in raw_questions:
-           
-            clean_q = q_line.strip().lstrip('0123456789.- ').strip()
-            if clean_q:
-                questions.append({
-                    "question": clean_q,
-                    "bloom": classify_bloom(clean_q)
-                })
-        
-        return questions[:num_questions]
+        for q  in matches[:num_questions]:
+            questions.append({
+                "question":q.strip(),
+                "bloom" :classify_bloom(q)
+            })
+        return questions
         
     except Exception as e:
         st.error(f"Gemini API Call Failed (Viva Questions): {e}")
@@ -325,6 +317,7 @@ def main():
             if not text:
                 st.warning("⚠️ Could not extract meaningful text. Try another file.")
                 st.stop()
+            st.session_state["text"] =text
 
            
             with st.spinner(f"Generating {num_mcqs} MCQs and {num_viva} Viva Questions..."):
@@ -333,11 +326,11 @@ def main():
 
            
             st.session_state["results"] = (mcqs, viva)
-            st.success("✅ Questions generated successfully! Go to the 'Generated Questions' tab to view them.")       
+            st.success("✅ Questions generated successfully! Go to the 'Generated Questions' tab to view them.") 
+
     with tab2:
       st.header("Step 2: View Generated Questions")
 
-    
       if "results" in st.session_state:
           mcqs, viva = st.session_state["results"]
       
@@ -391,16 +384,34 @@ def main():
       else:
           st.info("ℹ️ Upload a file first in the 'Upload File' tab.")
 
-      
-      user_input = st.chat_input("Ask a question...")
-      if user_input:
-         st.info("I have no knowledge about that. I am strictly designed to generate quizzes from PDF and CSV file content only. Thank you!")
-
+      if "text" in st.session_state:
+          
+        user_input = st.chat_input("Ask a question from your uploaded notes...")
+        response=None
+        if user_input:
+         prompt =f"""
+         You are a teaching assistant.
+         Answer the question ONLY using the following notes.
+         If the answer is not present ,say "Answer not found in the notes"
+         Notes:
+         {st.session_state["text"][:3000]}
+         Question:
+         {user_input}   
+         """
+         with st.spinner("Thinking..."):
+             response = call_gemini(prompt)
+        if response:
+            st.markdown("### 🤖 Answer")
+            st.write(response)
+             
+             
+            
+            
   
     st.markdown("""
     <hr>
     <div style="text-align:center; color:grey;">
-      #  <p>Developed with ❤️ by Us | Powered by Streamlit & Gemini</p>
+      #  <p>Developed with ❤️| Powered by Streamlit & Gemini</p>
     </div>
     """, unsafe_allow_html=True)
 if __name__ == "__main__":
