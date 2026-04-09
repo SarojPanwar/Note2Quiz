@@ -8,7 +8,6 @@ This project is designed for students, educators, and exam preparation platforms
 🎯 Project Type
 
 ✅ Academic Project
-✅ Group Project
 ✅ AI-Based Educational System
 ✅ Full-Stack Python Application (Streamlit-based)
 
