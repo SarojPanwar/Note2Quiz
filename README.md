@@ -63,4 +63,4 @@ Environment Management: python-dotenv
 Version Control: Git & GitHub
 
 IDE: VS Code
-Project Link = https://note2quiz.up.railway.app/
+Project Link = https://note2quiz.onrender.com/
