@@ -1,7 +1,7 @@
 ﻿📘 Note2Quiz – AI-Powered Question Generator
 
 Note2Quiz is an AI-driven exam question generation system that converts PDF or CSV lecture notes into exam-ready MCQs and Viva questions.
-The application uses Natural Language Processing (NLP) and Large Language Models (LLMs) to generate questions strictly based on the uploaded content, ensuring academic relevance and accuracy.
+The application uses Gemini API to generate questions strictly based on the uploaded content, ensuring academic relevance and accuracy.
 
 This project is designed for students, educators, and exam preparation platforms.
 
@@ -41,7 +41,7 @@ System generates:
 ✅ Bloom’s Taxonomy level
 Results are displayed and can be downloaded as a Word document
 
-🧠 AI & NLP Details
+🧠 AI Details
 
 Uses Google Gemini API for intelligent question generation
 Applies prompt engineering to ensure:
@@ -54,7 +54,7 @@ Ensures all questions are generated only from the uploaded content
 
 Programming Language: Python
 Framework: Streamlit
-AI / NLP: Google Gemini API, spaCy
+AI : Google Gemini API
 Data Processing: Pandas
 File Handling: PyMuPDF (PDF), CSV
 Document Export: python-docx
